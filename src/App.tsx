@@ -1,40 +1,97 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { ThemeProvider } from "./components/theme-provider";
 import { Slider } from "./components/ui/slider";
 import { Label } from "./components/ui/label";
 import { Separator } from "./components/ui/separator";
 
+const loadFromLocal = (key: string, fallback: number): (() => number) => {
+  return (): number => {
+    const v = localStorage.getItem(key);
+    if (v === null) {
+      return fallback;
+    }
+    const num = parseFloat(v);
+    if (Number.isNaN(num)) {
+      return fallback;
+    }
+    return num;
+  };
+};
+
+const keys = {
+  rodBaseHeight: "rod-base-height",
+  rodLength: "rod-length",
+  rodAngle: "rod-angle",
+  waterDepth: "water-depth",
+  castingDistance: "casting-distance",
+  leaderLength: "leader-length",
+};
+
 function App() {
-  const [rodBaseHeight, setRodBaseHeight] = useState<number>(2); //ft
-  const [rodLength, setRodLength] = useState<number>(6.5); //ft
-  const [rodAngle, setRodAngle] = useState<number>(22.5); //degrees
-  const [waterDepth, setWaterDepth] = useState<number>(15); //ft
-  const [castingDistance, setCastingDistance] = useState<number>(50); //ft
-  const [leaderLength, setLeaderLength] = useState<number>(12); //inches
+  const [rodBaseHeight, setRodBaseHeight] = useState<number>(
+    loadFromLocal(keys.rodBaseHeight, 2)
+  ); //ft
+  const [rodLength, setRodLength] = useState<number>(
+    loadFromLocal(keys.rodLength, 6.5)
+  ); //ft
+  const [rodAngle, setRodAngle] = useState<number>(
+    loadFromLocal(keys.rodAngle, 22.5)
+  ); //degrees
+  const [waterDepth, setWaterDepth] = useState<number>(
+    loadFromLocal(keys.waterDepth, 25)
+  ); //ft
+  const [castingDistance, setCastingDistance] = useState<number>(
+    loadFromLocal(keys.castingDistance, 50)
+  ); //ft
+  const [leaderLength, setLeaderLength] = useState<number>(
+    loadFromLocal(keys.leaderLength, 16)
+  ); //inches
 
+  //TODO: fix this nasty code some day
+  useEffect(() => {
+    localStorage.setItem(keys.rodBaseHeight, rodBaseHeight.toString());
+  }, [rodBaseHeight]);
+  useEffect(() => {
+    localStorage.setItem(keys.rodLength, rodLength.toString());
+  }, [rodLength]);
+  useEffect(() => {
+    localStorage.setItem(keys.rodAngle, rodAngle.toString());
+  }, [rodAngle]);
+  useEffect(() => {
+    localStorage.setItem(keys.waterDepth, waterDepth.toString());
+  }, [waterDepth]);
+  useEffect(() => {
+    localStorage.setItem(keys.castingDistance, castingDistance.toString());
+  }, [castingDistance]);
+  useEffect(() => {
+    localStorage.setItem(keys.leaderLength, leaderLength.toString());
+  }, [leaderLength]);
 
-  const rodAngleRad = rodAngle*Math.PI/180
-  const rodVerticalHeight = Math.sin(rodAngleRad) * rodLength
-  const rodHorizontalLength = Math.cos(rodAngleRad) * rodLength
-  const lineOutHorizontalDistance = (castingDistance - rodHorizontalLength)
-  const lineOutVerticalDistance = (rodVerticalHeight+rodBaseHeight+waterDepth)
-  console.log("horizontal", lineOutHorizontalDistance)
-  console.log("vertical", lineOutVerticalDistance)
-  const lineOut = Math.sqrt(lineOutVerticalDistance**2 + lineOutHorizontalDistance**2)
+  const rodAngleRad = (rodAngle * Math.PI) / 180;
+  const rodVerticalHeight = Math.sin(rodAngleRad) * rodLength;
+  const rodHorizontalLength = Math.cos(rodAngleRad) * rodLength;
+  const lineOutHorizontalDistance = castingDistance - rodHorizontalLength;
+  const lineOutVerticalDistance =
+    rodVerticalHeight + rodBaseHeight + waterDepth;
+  console.log("horizontal", lineOutHorizontalDistance);
+  console.log("vertical", lineOutVerticalDistance);
+  const lineOut = Math.sqrt(
+    lineOutVerticalDistance ** 2 + lineOutHorizontalDistance ** 2
+  );
 
-  const lineOutSineAlpha = lineOutVerticalDistance / lineOut
-  const lureHeightInInches = lineOutSineAlpha * (leaderLength );
+  const lineOutSineAlpha = lineOutVerticalDistance / lineOut;
+  const lureHeightInInches = lineOutSineAlpha * leaderLength;
 
   //for information only - visible horizontal distance
   // const alpha = Math.asin(lineOutSineAlpha)
-  const lineOutCosineAlpha = lineOutHorizontalDistance / lineOut
-  console.log("alpha", Math.asin(lineOutSineAlpha)*180/Math.PI)
-  const underWaterWidth = lineOutCosineAlpha * waterDepth /   lineOutSineAlpha 
-  const aboveWaterWidth = lineOutHorizontalDistance - underWaterWidth
-  console.log("under water width", underWaterWidth)
-  console.log("above water width", aboveWaterWidth)
-  console.log("visible line distance", aboveWaterWidth + rodHorizontalLength)
+  const lineOutCosineAlpha = lineOutHorizontalDistance / lineOut;
+  console.log("alpha", (Math.asin(lineOutSineAlpha) * 180) / Math.PI);
+  const underWaterWidth = (lineOutCosineAlpha * waterDepth) / lineOutSineAlpha;
+  const aboveWaterWidth = lineOutHorizontalDistance - underWaterWidth;
+  console.log("under water width", underWaterWidth);
+  console.log("above water width", aboveWaterWidth);
+  console.log("visible line distance", aboveWaterWidth + rodHorizontalLength);
 
   return (
     <ThemeWrapper>
@@ -47,9 +104,15 @@ function App() {
             <CardTitle>Result</CardTitle>
           </CardHeader>
           <CardContent>
-            {`You will have ${Math.round((lineOut+Number.EPSILON)*100)/100} ft of line out`}
+            {`You will have ${
+              Math.round((lineOut + Number.EPSILON) * 100) / 100
+            } ft of line out`}
             <br />
-            {`Your lure will be ${Math.round((lureHeightInInches+Number.EPSILON)*100)/100} inches (${Math.round((lureHeightInInches/12+Number.EPSILON)*100)/100} ft) off the bottom.`}
+            {`Your lure will be ${
+              Math.round((lureHeightInInches + Number.EPSILON) * 100) / 100
+            } inches (${
+              Math.round((lureHeightInInches / 12 + Number.EPSILON) * 100) / 100
+            } ft) off the bottom.`}
           </CardContent>
         </Card>
         <Card className="w-[350px]">
@@ -61,8 +124,11 @@ function App() {
               <Label htmlFor="rod_base_height">
                 Rod Vertical Height
                 <br />
-                <div className="text-xs p-2">This is the distance of the rod butt from the surface of the water</div>
-                </Label>
+                <div className="text-xs p-2">
+                  This is the distance of the rod butt from the surface of the
+                  water
+                </div>
+              </Label>
               <div className="flex flex-row">
                 <Slider
                   id="rod_base_height"
@@ -96,9 +162,12 @@ function App() {
               </div>
               <Separator />
               <Label htmlFor="rod_angle">
-                Rod Angle 
+                Rod Angle
                 <br />
-                <div className="text-xs p-2">This is the angle of the rod to the water surface (where flat to the water is 0 degree and perpendicular is 90 degree)</div>
+                <div className="text-xs p-2">
+                  This is the angle of the rod to the water surface (where flat
+                  to the water is 0 degree and perpendicular is 90 degree)
+                </div>
               </Label>
               <div className="flex flex-row">
                 <Slider
@@ -135,8 +204,10 @@ function App() {
               <Label htmlFor="casting_distance">
                 Casting Distance
                 <br />
-                <div className="text-xs p-2">Distance from you to where lure lands in the water</div>
-                </Label>
+                <div className="text-xs p-2">
+                  Distance from you to where lure lands in the water
+                </div>
+              </Label>
               <div className="flex flex-row">
                 <Slider
                   id="casting_distance"
@@ -171,7 +242,6 @@ function App() {
             </div>
           </CardContent>
         </Card>
-
       </div>
     </ThemeWrapper>
   );
